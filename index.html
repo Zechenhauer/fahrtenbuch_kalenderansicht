@@ -77,7 +77,7 @@
 
         .calendar-grid {
             display: grid;
-            grid-template-columns: repeat(5, 1fr);
+            grid-template-columns: repeat(7, 1fr);
             gap: 6px;
             margin-bottom: 20px;
         }
@@ -87,7 +87,7 @@
             font-weight: bold;
             color: var(--text-muted);
             padding-bottom: 8px;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
         }
 
         .day-cell {
@@ -95,7 +95,7 @@
             border: 1px solid var(--border-color);
             border-radius: 8px;
             min-height: 80px;
-            padding: 8px;
+            padding: 6px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
@@ -116,25 +116,29 @@
             border-left: 4px solid var(--accent-free);
         }
 
+        .day-cell.other-month {
+            opacity: 0.3;
+        }
+
         .day-number {
             font-weight: bold;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
         }
 
         .day-status {
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             color: var(--text-muted);
         }
 
         .pdf-icon-badge {
             position: absolute;
-            bottom: 8px;
-            right: 8px;
+            bottom: 6px;
+            right: 6px;
             background: rgba(255, 167, 38, 0.15);
             color: var(--primary);
-            padding: 2px 6px;
+            padding: 2px 4px;
             border-radius: 4px;
-            font-size: 0.7rem;
+            font-size: 0.65rem;
             text-decoration: none;
             font-weight: bold;
             border: 1px solid rgba(255, 167, 38, 0.3);
@@ -420,6 +424,8 @@
         <div class="weekday">Mi</div>
         <div class="weekday">Do</div>
         <div class="weekday">Fr</div>
+        <div class="weekday" style="color: var(--text-muted);">Sa</div>
+        <div class="weekday" style="color: var(--text-muted);">So</div>
     </div>
 
     <div class="calendar-grid" id="calendar-days"></div>
@@ -470,7 +476,7 @@
     // JSONBIN.IO EINSTELLUNGEN
     // ==========================================
     const JSONBIN_BIN_ID = "6a61f77923a2f6593e59d0ce"; 
-    const JSONBIN_MASTER_KEY = "$2a$10$1ynLUupN/Fka115SZVn9NurNpRBaWqrnH8qQXanu5c.cHPfriVgWS"; // (Hier bitte deinen Master-Key von JSONBin einfügen, falls noch nicht geschehen)
+    const JSONBIN_MASTER_KEY = "$2a$10$1ynLUupN/Fka115SZVn9NurNpRBaWqrnH8qQXanu5c.cHPfriVgWS";
 
     let currentDate = new Date(2026, 6, 1);
     let selectedDateKey = null;
@@ -545,14 +551,34 @@
 
         const grid = document.getElementById('calendar-days');
         grid.innerHTML = '';
+
+        // Erster Tag des Monats und wie viele Tage der Monat hat
+        const firstDayOfMonth = new Date(year, month, 1);
         const totalDays = new Date(year, month + 1, 0).getDate();
+        
+        // Wochentag des Monatsanfangs anpassen (Mo = 0, So = 6)
+        let startingDayOfWeek = firstDayOfMonth.getDay() - 1;
+        if (startingDayOfWeek === -1) startingDayOfWeek = 6; // Sonntag korrigieren
 
+        // Letzter Tag des Vormonats für die Auffüllung
+        const prevMonthTotalDays = new Date(year, month, 0).getDate();
+
+        // 1. Auffüllung Tage vom Vormonat
+        for (let i = startingDayOfWeek - 1; i >= 0; i--) {
+            let dayNum = prevMonthTotalDays - i;
+            let prevMonth = month === 0 ? 11 : month - 1;
+            let prevYear = month === 0 ? year - 1 : year;
+            let dateKey = `${prevYear}-${String(prevMonth + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+            
+            const cell = document.createElement('div');
+            cell.className = 'day-cell other-month';
+            cell.innerHTML = `<div class="day-number">${dayNum}</div>`;
+            cell.onclick = () => openModal(dateKey);
+            grid.appendChild(cell);
+        }
+
+        // 2. Reguläre Tage des aktuellen Monats
         for (let day = 1; day <= totalDays; day++) {
-            let currentLoopDate = new Date(year, month, day);
-            let dayOfWeek = currentLoopDate.getDay();
-
-            if (dayOfWeek === 0 || dayOfWeek === 6) continue;
-
             const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
             const fahrtenbuchData = appData.fahrtenbuchData || {};
             const dayData = fahrtenbuchData[dateKey] || { status: '', pdfLink: '' };
@@ -575,6 +601,21 @@
                 <div class="day-status">${statusText}</div>
                 ${pdfBadgeHTML}
             `;
+            grid.appendChild(cell);
+        }
+
+        // 3. Auffüllung Tage vom Folgemonat (damit das Raster voll bleibt)
+        let totalCellsSoFar = startingDayOfWeek + totalDays;
+        let remainingCells = totalCellsSoFar % 7 === 0 ? 0 : 7 - (totalCellsSoFar % 7);
+        for (let day = 1; day <= remainingCells; day++) {
+            let nextMonth = month === 11 ? 0 : month + 1;
+            let nextYear = month === 11 ? year + 1 : year;
+            let dateKey = `${nextYear}-${String(nextMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+            const cell = document.createElement('div');
+            cell.className = 'day-cell other-month';
+            cell.innerHTML = `<div class="day-number">${day}</div>`;
+            cell.onclick = () => openModal(dateKey);
             grid.appendChild(cell);
         }
     }
@@ -794,15 +835,19 @@
 
     function saveNewCert() {
         const name = document.getElementById('cert-name-input').value.trim();
-        const link = document.getElementById('cert-link-input').value.trim();
+        const link = document.getElementById('cert-link-input-input').value.trim(); // Falls ID angepasst, hier prüfen
 
-        if (!name || !link) {
+        // Fallback falls ID anders
+        const nameInput = document.getElementById('cert-name-input').value.trim();
+        const linkInput = document.getElementById('cert-link-input').value.trim();
+
+        if (!nameInput || !linkInput) {
             alert('Bitte sowohl Dateinamen als auch Link eingeben.');
             return;
         }
 
         if (!appData.certificatesData) appData.certificatesData = [];
-        appData.certificatesData.push({ name: name, link: link });
+        appData.certificatesData.push({ name: nameInput, link: linkInput });
         closeCertModal();
         saveToCloud();
     }
