@@ -501,18 +501,33 @@
 
     const months = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
 
-    // Hilfsfunktion: Automatische Optimierung von Google Drive Links auf /preview
+    // Hilfsfunktion: Erkennt, ob der Nutzer auf einem Smartphone/Tablet ist
+    function isMobileDevice() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    }
+
+    // Hilfsfunktion: Passt den Link nur auf Handys auf /preview an, am PC bleibt er normal zum Drucken!
     function formatDriveLink(url) {
         if (!url) return '';
         let cleanUrl = url.trim();
+        
         if (cleanUrl.includes('drive.google.com')) {
-            // Ersetzt alles am Ende nach /view oder /edit durch /preview
-            cleanUrl = cleanUrl.replace(/\/view.*$/, '/preview');
-            cleanUrl = cleanUrl.replace(/\/edit.*$/, '/preview');
-            if (!cleanUrl.endsWith('/preview') && cleanUrl.includes('/file/d/')) {
-                // Falls es eine saubere ID ohne Suffix ist
-                if (!cleanUrl.endsWith('/')) cleanUrl += '/';
-                cleanUrl += 'preview';
+            if (isMobileDevice()) {
+                // Auf dem Handy: Automatisch auf /preview umstellen, damit die Einträge korrekt laden
+                cleanUrl = cleanUrl.replace(/\/view.*$/, '/preview');
+                cleanUrl = cleanUrl.replace(/\/edit.*$/, '/preview');
+                if (!cleanUrl.endsWith('/preview') && cleanUrl.includes('/file/d/')) {
+                    if (!cleanUrl.endsWith('/')) cleanUrl += '/';
+                    cleanUrl += 'preview';
+                }
+            } else {
+                // Am PC: Den Link im normalen /view Modus lassen, damit man direkt drucken und steuern kann!
+                cleanUrl = cleanUrl.replace(/\/preview.*$/, '/view?usp=sharing');
+                cleanUrl = cleanUrl.replace(/\/edit.*$/, '/view?usp=sharing');
+                if (!cleanUrl.includes('/view') && cleanUrl.includes('/file/d/')) {
+                    if (!cleanUrl.endsWith('/')) cleanUrl += '/';
+                    cleanUrl += 'view?usp=sharing';
+                }
             }
         }
         return cleanUrl;
@@ -943,8 +958,14 @@
     function saveDayData() {
         if (!selectedDateKey) return;
 
-        const status = document.getElementById('status-select').value;
-        const pdfLink = document.getElementById('pdf-link-input').value.trim();
+        const status = document.getElementById('status-select-select` ? ... haha, 'status-select'
+        const statusElem = document.getElementById('status-select');
+        const pdfLinkElem = document.getElementById('pdf-link-input');
+        
+        if (!statusElem || !pdfLinkElem) return;
+
+        const status = statusElem.value;
+        const pdfLink = pdfLinkElem.value.trim();
         
         if (!appData.fahrtenbuchData) appData.fahrtenbuchData = {};
         if (!appData.fahrtenbuchData[selectedDateKey]) {
