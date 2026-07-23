@@ -11,8 +11,8 @@
             --text-color: #e0e0e0;
             --text-muted: #9e9e9e;
             --border-color: #333333;
-            --accent-work: #ef5350; /* Rot für Arbeit */
-            --accent-free: #81c784; /* Grün für Frei */
+            --accent-work: #ef5350; /* Rot für Offen / Plus */
+            --accent-free: #81c784; /* Grün für Guthaben / Minus */
             --primary: #ffa726; /* Schönes Orange */
         }
 
@@ -28,7 +28,7 @@
 
         .container {
             width: 100%;
-            max-width: 600px;
+            max-width: 650px;
             background: var(--card-bg);
             border: 1px solid var(--border-color);
             border-radius: 12px;
@@ -78,7 +78,7 @@
         .calendar-grid {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
-            gap: 6px;
+            gap: 5px;
             margin-bottom: 20px;
         }
 
@@ -87,15 +87,15 @@
             font-weight: bold;
             color: var(--text-muted);
             padding-bottom: 8px;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
         }
 
         .day-cell {
             background: #2a2a2a;
             border: 1px solid var(--border-color);
             border-radius: 8px;
-            min-height: 80px;
-            padding: 6px;
+            min-height: 75px;
+            padding: 5px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
@@ -130,11 +130,11 @@
 
         .day-number {
             font-weight: bold;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
         }
 
         .day-status {
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             color: var(--text-muted);
             margin-top: auto;
         }
@@ -142,9 +142,9 @@
         .pdf-icon-badge {
             background: rgba(255, 167, 38, 0.15);
             color: var(--primary);
-            padding: 2px 5px;
-            border-radius: 4px;
-            font-size: 0.65rem;
+            padding: 1px 3px;
+            border-radius: 3px;
+            font-size: 0.6rem;
             text-decoration: none;
             font-weight: bold;
             border: 1px solid rgba(255, 167, 38, 0.3);
@@ -597,17 +597,26 @@
         const firstDayOfMonth = new Date(year, month, 1);
         const totalDays = new Date(year, month + 1, 0).getDate();
 
+        // Wochentag des 1. Monats-Tages anpassen (JS: 0=So, 1=Mo ... 6=Sa) -> Mo=0 bis So=6
+        let firstDayIndex = firstDayOfMonth.getDay() - 1;
+        if (firstDayIndex === -1) firstDayIndex = 6; // Sonntag auf Position 6
+
+        // Leere Felder für Tage vor Monatsbeginn einfügen, damit das Raster Mo-So korrekt ausgerichtet ist
+        for (let i = 0; i < firstDayIndex; i++) {
+            const emptyCell = document.createElement('div');
+            emptyCell.className = 'day-cell';
+            emptyCell.style.visibility = 'hidden';
+            emptyCell.style.border = 'none';
+            emptyCell.style.background = 'transparent';
+            grid.appendChild(emptyCell);
+        }
+
         for (let day = 1; day <= totalDays; day++) {
-            const tempDate = new Date(year, month, day);
-            const weekDay = tempDate.getDay();
-
-            // Samstage (6) und Sonntage (0) überspringen
-            if (weekDay === 0 || weekDay === 6) continue;
-
             const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
             const fahrtenbuchData = appData.fahrtenbuchData || {};
             const dayData = fahrtenbuchData[dateKey] || { status: '', pdfLink: '' };
 
+            const todayObjCheck = new Date(year, month, day);
             let cellClass = `day-cell ${dayData.status}`;
             if (dateKey === todayKey) cellClass += ' today';
 
@@ -787,10 +796,6 @@
         const monthlyTarget = 40.00;
         let currentVal = appData.hoursData[mKey].current || 0;
         
-        // KORRIGIERTE BERECHNUNG: 
-        // 40 Std. + (Minus-Übertrag als zusätzliche Last, d.h. wir subtrahieren einen negativen Wert bzw. addieren ihn korrekt)
-        // Beispiel: Vorgabe 40 + Übertrag (-14) -> Da ein negativer Übertrag bedeutet, dass man 14 Stunden Rückstand hat, 
-        // müssen wir sie auf die 40 aufaddieren (40 - (-14) = 54 Std Gesamtsoll).
         let targetWithCarry = monthlyTarget - carryOver;
         let differenceVal = targetWithCarry - currentVal;
 
@@ -798,7 +803,7 @@
 
         const container = document.getElementById('section-stunden');
         
-        // Dynamische Farben (Grün bei Minus/Guthaben, Rot bei Plus/Restschuld)
+        // FARBLOGIK: Minus (Guthaben) = Grün, Plus (Offene Stunden) = Rot
         let diffColor = differenceVal < 0 ? 'var(--accent-free)' : 'var(--accent-work)';
         let diffBg = differenceVal < 0 ? 'rgba(129, 199, 132, 0.08)' : 'rgba(239, 83, 80, 0.08)';
         let diffBorder = differenceVal < 0 ? 'rgba(129, 199, 132, 0.3)' : 'rgba(239, 83, 80, 0.3)';
