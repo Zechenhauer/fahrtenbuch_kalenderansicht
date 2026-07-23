@@ -785,15 +785,18 @@
         const monthlyTarget = 40.00;
         let currentVal = appData.hoursData[mKey].current || 0;
         
-        // NEUE BERECHNUNG: 40 Std. + Übertrag (Plus oder Minus) = Gesamtsoll minus Erarbeitet
-        let targetWithCarry = monthlyTarget + carryOver;
+        // KORRIGIERTE BERECHNUNG: 
+        // 40 Std. + (Minus-Übertrag als zusätzliche Last, d.h. wir subtrahieren einen negativen Wert bzw. addieren ihn korrekt)
+        // Beispiel: Vorgabe 40 + Übertrag (-14) -> Da ein negativer Übertrag bedeutet, dass man 14 Stunden Rückstand hat, 
+        // müssen wir sie auf die 40 aufaddieren (40 - (-14) = 54 Std Gesamtsoll).
+        let targetWithCarry = monthlyTarget - carryOver;
         let differenceVal = targetWithCarry - currentVal;
 
-        appData.hoursData[mKey].total = differenceVal; // Speichern für eventuellen Folgemonats-Übertrag
+        appData.hoursData[mKey].total = differenceVal; 
 
         const container = document.getElementById('section-stunden');
         
-        // Dynamische Farben für die Differenz (Grün bei Minus/Guthaben, Rot bei Plus/Restschuld)
+        // Dynamische Farben (Grün bei Minus/Guthaben, Rot bei Plus/Restschuld)
         let diffColor = differenceVal < 0 ? 'var(--accent-free)' : 'var(--accent-work)';
         let diffBg = differenceVal < 0 ? 'rgba(129, 199, 132, 0.08)' : 'rgba(239, 83, 80, 0.08)';
         let diffBorder = differenceVal < 0 ? 'rgba(129, 199, 132, 0.3)' : 'rgba(239, 83, 80, 0.3)';
@@ -831,7 +834,7 @@
         const currentVal = parseFloat(document.getElementById('input-current').value) || 0;
         const monthlyTarget = 40.00;
         
-        let targetWithCarry = monthlyTarget + carryVal;
+        let targetWithCarry = monthlyTarget - carryVal;
         let differenceVal = targetWithCarry - currentVal;
 
         if (!appData.hoursData[mKey]) appData.hoursData[mKey] = {};
