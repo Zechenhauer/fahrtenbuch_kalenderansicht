@@ -11,8 +11,8 @@
             --text-color: #e0e0e0;
             --text-muted: #9e9e9e;
             --border-color: #333333;
-            --accent-work: #ef5350; /* Rot für Offen / Plus */
-            --accent-free: #81c784; /* Grün für Guthaben / Minus */
+            --accent-work: #ef5350; /* Rot für Plus / Offene Stunden */
+            --accent-free: #81c784; /* Grün für Minus / Guthaben */
             --primary: #ffa726; /* Schönes Orange */
         }
 
@@ -597,11 +597,9 @@
         const firstDayOfMonth = new Date(year, month, 1);
         const totalDays = new Date(year, month + 1, 0).getDate();
 
-        // Wochentag des 1. Monats-Tages anpassen (JS: 0=So, 1=Mo ... 6=Sa) -> Mo=0 bis So=6
         let firstDayIndex = firstDayOfMonth.getDay() - 1;
-        if (firstDayIndex === -1) firstDayIndex = 6; // Sonntag auf Position 6
+        if (firstDayIndex === -1) firstDayIndex = 6;
 
-        // Leere Felder für Tage vor Monatsbeginn einfügen, damit das Raster Mo-So korrekt ausgerichtet ist
         for (let i = 0; i < firstDayIndex; i++) {
             const emptyCell = document.createElement('div');
             emptyCell.className = 'day-cell';
@@ -616,7 +614,6 @@
             const fahrtenbuchData = appData.fahrtenbuchData || {};
             const dayData = fahrtenbuchData[dateKey] || { status: '', pdfLink: '' };
 
-            const todayObjCheck = new Date(year, month, day);
             let cellClass = `day-cell ${dayData.status}`;
             if (dateKey === todayKey) cellClass += ' today';
 
@@ -772,10 +769,11 @@
         const year = currentDate.getFullYear();
         const month = currentDate.getMonth();
         const mKey = getMonthKey();
-        const prevMKey = getPrevMonthKey();
 
         if (!appData.hoursData) appData.hoursData = {};
-        if (!appData.hoursData[mKey]) appData.hoursData[mKey] = { current: 0 };
+        if (!appData.hoursData[mKey]) {
+            appData.hoursData[mKey] = { current: 0, target: 54.00, carry: 0 };
+        }
         
         let workDaysCount = 0;
         const totalDaysInMonth = new Date(year, month + 1, 0).getDate();
@@ -786,27 +784,26 @@
             }
         }
 
-        let carryOver = 0;
-        if (appData.hoursData[prevMKey] && appData.hoursData[prevMKey].total !== undefined) {
-            carryOver = appData.hoursData[prevMKey].total;
-        } else if (appData.hoursData[mKey].carry !== undefined) {
-            carryOver = appData.hoursData[mKey].carry;
-        }
-
-        const monthlyTarget = 40.00;
+        let carryVal = appData.hoursData[mKey].carry !== undefined ? appData.hoursData[mKey].carry : 0;
+        let monthlyTarget = appData.hoursData[mKey].target !== undefined ? appData.hoursData[mKey].target : 54.00;
         let currentVal = appData.hoursData[mKey].current || 0;
         
-        let targetWithCarry = monthlyTarget - carryOver;
+        // Korrekte Berechnung: Differenz = (Soll - Übertrag) - Erarbeitet
+        // Beispiel: (54 - 14) - 37,5 = 40 - 37,5 = +2,5 (Noch zu leisten)
+        let targetWithCarry = monthlyTarget - carryVal;
         let differenceVal = targetWithCarry - currentVal;
 
         appData.hoursData[mKey].total = differenceVal; 
 
         const container = document.getElementById('section-stunden');
         
-        // FARBLOGIK: Minus (Guthaben) = Grün, Plus (Offene Stunden) = Rot
-        let diffColor = differenceVal < 0 ? 'var(--accent-free)' : 'var(--accent-work)';
-        let diffBg = differenceVal < 0 ? 'rgba(129, 199, 132, 0.08)' : 'rgba(239, 83, 80, 0.08)';
-        let diffBorder = differenceVal < 0 ? 'rgba(129, 199, 132, 0.3)' : 'rgba(239, 83, 80, 0.3)';
+        // NEUE FARBLOGIK nach Wunsch:
+        // Wenn das Vorzeichen ein Plus ist (differenceVal > 0) -> ROT (Offene Stunden)
+        // Wenn das Vorzeichen ein Minus ist oder 0 (differenceVal <= 0) -> GRÜN (Guthaben)
+        let isPlus = differenceVal > 0;
+        let diffColor = isPlus ? 'var(--accent-work)' : 'var(--accent-free)';
+        let diffBg = isPlus ? 'rgba(239, 83, 80, 0.08)' : 'rgba(129, 199, 132, 0.08)';
+        let diffBorder = isPlus ? 'rgba(239, 83, 80, 0.3)' : 'rgba(129, 199, 132, 0.3)';
 
         container.innerHTML = `
             <span class="section-title">Meine erarbeiteten Stunden</span>
@@ -817,11 +814,11 @@
                 </div>
                 <div class="hours-row">
                     <label>Übertrag (Vormonat)</label>
-                    <input type="number" step="0.25" id="input-carry" value="${carryOver}" onchange="updateHours()">
+                    <input type="number" step="0.25" id="input-carry" value="${carryVal}" onchange="updateHours()">
                 </div>
                 <div class="hours-row">
                     <label>Monatsvorgabe (Soll)</label>
-                    <input type="text" value="${monthlyTarget.toFixed(2)} Std" readonly style="background: transparent; border: none; font-weight: bold; color: var(--text-color);">
+                    <input type="number" step="0.25" id="input-target" value="${monthlyTarget}" onchange="updateHours()">
                 </div>
                 <div class="hours-row">
                     <label>Erarbeitet (Monat)</label>
@@ -838,14 +835,15 @@
     function updateHours() {
         const mKey = getMonthKey();
         const carryVal = parseFloat(document.getElementById('input-carry').value) || 0;
+        const targetVal = parseFloat(document.getElementById('input-target').value) || 0;
         const currentVal = parseFloat(document.getElementById('input-current').value) || 0;
-        const monthlyTarget = 40.00;
         
-        let targetWithCarry = monthlyTarget - carryVal;
+        let targetWithCarry = targetVal - carryVal;
         let differenceVal = targetWithCarry - currentVal;
 
         if (!appData.hoursData[mKey]) appData.hoursData[mKey] = {};
         appData.hoursData[mKey].carry = carryVal;
+        appData.hoursData[mKey].target = targetVal;
         appData.hoursData[mKey].current = currentVal;
         appData.hoursData[mKey].total = differenceVal;
 
