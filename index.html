@@ -125,28 +125,34 @@
             opacity: 0.3;
         }
 
+        .day-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            width: 100%;
+        }
+
         .day-number {
             font-weight: bold;
             font-size: 0.9rem;
         }
 
         .day-status {
-            font-size: 0.7rem;
+            font-size: 0.75rem;
             color: var(--text-muted);
+            margin-top: auto;
         }
 
         .pdf-icon-badge {
-            position: absolute;
-            bottom: 6px;
-            right: 6px;
             background: rgba(255, 167, 38, 0.15);
             color: var(--primary);
-            padding: 2px 4px;
+            padding: 2px 5px;
             border-radius: 4px;
             font-size: 0.65rem;
             text-decoration: none;
             font-weight: bold;
             border: 1px solid rgba(255, 167, 38, 0.3);
+            white-space: nowrap;
         }
 
         .pdf-icon-badge:hover {
@@ -584,7 +590,11 @@
 
             const cell = document.createElement('div');
             cell.className = cellClass;
-            cell.innerHTML = `<div class="day-number">${dayNum}</div>`;
+            cell.innerHTML = `
+                <div class="day-header-row">
+                    <div class="day-number">${dayNum}</div>
+                </div>
+            `;
             cell.onclick = () => openModal(dateKey);
             grid.appendChild(cell);
         }
@@ -612,9 +622,11 @@
             let pdfBadgeHTML = dayData.pdfLink ? `<a href="${dayData.pdfLink}" target="_blank" class="pdf-icon-badge" title="PDF öffnen">📄 PDF</a>` : '';
 
             cell.innerHTML = `
-                <div class="day-number">${day}</div>
+                <div class="day-header-row">
+                    <div class="day-number">${day}</div>
+                    ${pdfBadgeHTML}
+                </div>
                 <div class="day-status">${statusText}</div>
-                ${pdfBadgeHTML}
             `;
             grid.appendChild(cell);
         }
@@ -632,7 +644,11 @@
 
             const cell = document.createElement('div');
             cell.className = cellClass;
-            cell.innerHTML = `<div class="day-number">${day}</div>`;
+            cell.innerHTML = `
+                <div class="day-header-row">
+                    <div class="day-number">${day}</div>
+                </div>
+            `;
             cell.onclick = () => openModal(dateKey);
             grid.appendChild(cell);
         }
