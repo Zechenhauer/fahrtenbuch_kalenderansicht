@@ -116,6 +116,11 @@
             border-left: 4px solid var(--accent-free);
         }
 
+        .day-cell.today {
+            border: 2px solid var(--primary);
+            background: rgba(255, 167, 38, 0.08);
+        }
+
         .day-cell.other-month {
             opacity: 0.3;
         }
@@ -552,6 +557,10 @@
         const grid = document.getElementById('calendar-days');
         grid.innerHTML = '';
 
+        // Heutiges Datum für den direkten Vergleich ermitteln
+        const todayObj = new Date();
+        const todayKey = `${todayObj.getFullYear()}-${String(todayObj.getMonth() + 1).padStart(2, '0')}-${String(todayObj.getDate()).padStart(2, '0')}`;
+
         // Erster Tag des Monats und wie viele Tage der Monat hat
         const firstDayOfMonth = new Date(year, month, 1);
         const totalDays = new Date(year, month + 1, 0).getDate();
@@ -570,8 +579,11 @@
             let prevYear = month === 0 ? year - 1 : year;
             let dateKey = `${prevYear}-${String(prevMonth + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
             
+            let cellClass = 'day-cell other-month';
+            if (dateKey === todayKey) cellClass += ' today';
+
             const cell = document.createElement('div');
-            cell.className = 'day-cell other-month';
+            cell.className = cellClass;
             cell.innerHTML = `<div class="day-number">${dayNum}</div>`;
             cell.onclick = () => openModal(dateKey);
             grid.appendChild(cell);
@@ -583,8 +595,11 @@
             const fahrtenbuchData = appData.fahrtenbuchData || {};
             const dayData = fahrtenbuchData[dateKey] || { status: '', pdfLink: '' };
 
+            let cellClass = `day-cell ${dayData.status}`;
+            if (dateKey === todayKey) cellClass += ' today';
+
             const cell = document.createElement('div');
-            cell.className = `day-cell ${dayData.status}`;
+            cell.className = cellClass;
             cell.onclick = (e) => {
                 if (e.target.tagName === 'A') return;
                 openModal(dateKey);
@@ -612,8 +627,11 @@
             let nextYear = month === 11 ? year + 1 : year;
             let dateKey = `${nextYear}-${String(nextMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 
+            let cellClass = 'day-cell other-month';
+            if (dateKey === todayKey) cellClass += ' today';
+
             const cell = document.createElement('div');
-            cell.className = 'day-cell other-month';
+            cell.className = cellClass;
             cell.innerHTML = `<div class="day-number">${day}</div>`;
             cell.onclick = () => openModal(dateKey);
             grid.appendChild(cell);
@@ -834,10 +852,6 @@
     }
 
     function saveNewCert() {
-        const name = document.getElementById('cert-name-input').value.trim();
-        const link = document.getElementById('cert-link-input-input').value.trim(); // Falls ID angepasst, hier prüfen
-
-        // Fallback falls ID anders
         const nameInput = document.getElementById('cert-name-input').value.trim();
         const linkInput = document.getElementById('cert-link-input').value.trim();
 
