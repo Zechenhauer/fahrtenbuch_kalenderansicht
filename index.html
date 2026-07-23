@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eisen Krämer - Fahrtenbuch</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --text-color: #e0e0e0;
+            --text-muted: #9e9e9e;
+            --border-color: #333333;
+            --accent-work: #ef5350; /* Rot für Arbeit */
+            --accent-free: #81c784; /* Grün für Frei */
+            --primary: #ffa726; /* Schönes Orange */
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            box-sizing: border-box;
+        }
+
+        h2 {
+            text-align: center;
+            margin-top: 0;
+            margin-bottom: 5px;
+            color: var(--primary);
+        }
+
+        .subtitle {
+            text-align: center;
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .calendar-header button {
+            background: var(--border-color);
+            color: var(--text-color);
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .calendar-header button:hover {
+            background: var(--primary);
+            color: #000;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 6px;
+            margin-bottom: 20px;
+        }
+
+        .weekday {
+            text-align: center;
+            font-weight: bold;
+            color: var(--text-muted);
+            padding-bottom: 8px;
+            font-size: 0.9rem;
+        }
+
+        .day-cell {
+            background: #2a2a2a;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            min-height: 80px;
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .day-cell:hover {
+            border-color: var(--primary);
+        }
+
+        .day-cell.work {
+            border-left: 4px solid var(--accent-work);
+        }
+
+        .day-cell.free {
+            border-left: 4px solid var(--accent-free);
+        }
+
+        .day-number {
+            font-weight: bold;
+            font-size: 0.95rem;
+        }
+
+        .day-status {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .pdf-icon-badge {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            background: rgba(255, 167, 38, 0.15);
+            color: var(--primary);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            text-decoration: none;
+            font-weight: bold;
+            border: 1px solid rgba(255, 167, 38, 0.3);
+        }
+
+        .pdf-icon-badge:hover {
+            background: var(--primary);
+            color: #000;
+        }
+
+        .sections-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .custom-section {
+            background: #252525;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px 15px;
+        }
+
+        .section-form {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .section-title {
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: var(--text-color);
+        }
+
+        .input-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .section-form input {
+            flex-grow: 1;
+            padding: 6px 10px;
+            background: #1a1a1a;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+
+        .btn-section-save {
+            background: var(--primary);
+            color: #000;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.85rem;
+            white-space: nowrap;
+        }
+
+        .btn-section-save:hover {
+            background: #ffb74d;
+        }
+
+        .section-display {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .display-left {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .section-link {
+            color: var(--primary);
+            font-size: 0.85rem;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .section-link:hover {
+            text-decoration: underline;
+        }
+
+        .btn-section-edit {
+            background: var(--border-color);
+            color: var(--text-color);
+            border: none;
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        .btn-section-edit:hover {
+            background: #444;
+        }
+
+        .hours-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .hours-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #1a1a1a;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+
+        .hours-row label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .hours-row input {
+            width: 90px;
+            padding: 6px 8px;
+            background: #2a2a2a;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            border-radius: 4px;
+            font-size: 0.9rem;
+            text-align: right;
+            box-sizing: border-box;
+        }
+
+        .hours-row.total-row {
+            background: rgba(255, 167, 38, 0.08);
+            border-color: rgba(255, 167, 38, 0.3);
+        }
+
+        .hours-row.total-row label {
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        .hours-row.total-row input {
+            color: var(--primary);
+            font-weight: bold;
+            background: transparent;
+            border: none;
+        }
+
+        .cert-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .btn-add-cert {
+            background: var(--border-color);
+            color: var(--text-color);
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+
+        .btn-add-cert:hover {
+            background: var(--primary);
+            color: #000;
+        }
+
+        .cert-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .cert-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #1a1a1a;
+            padding: 6px 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+
+        .cert-delete {
+            background: none;
+            border: none;
+            color: var(--accent-work);
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        .cert-delete:hover {
+            color: #ff8a80;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            padding: 20px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 380px;
+        }
+
+        .modal-content label {
+            display: block;
+            margin-top: 12px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .modal-content select, .modal-content input {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            background: #2a2a2a;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .modal-buttons button {
+            padding: 8px 14px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .btn-save { background: var(--primary); color: #000; font-weight: bold; }
+        .btn-close { background: var(--border-color); color: var(--text-color); }
+        
+        #sync-status {
+            text-align: center;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Eisen Krämer</h2>
+    <div class="subtitle">Fahrtenbuch J. Schützendorf</div>
+    
+    <div class="calendar-header">
+        <button onclick="changeMonth(-1)">&#10094;</button>
+        <span id="month-year-display">Juli 2026</span>
+        <button onclick="changeMonth(1)">&#10095;</button>
+    </div>
+
+    <div class="calendar-grid">
+        <div class="weekday">Mo</div>
+        <div class="weekday">Di</div>
+        <div class="weekday">Mi</div>
+        <div class="weekday">Do</div>
+        <div class="weekday">Fr</div>
+    </div>
+
+    <div class="calendar-grid" id="calendar-days"></div>
+
+    <div class="sections-container">
+        <div class="custom-section" id="section-eisen"></div>
+        <div class="custom-section" id="section-meine-stunden"></div>
+        <div class="custom-section" id="section-stunden"></div>
+        <div class="custom-section" id="section-zertifikate"></div>
+    </div>
+    <div id="sync-status">Daten werden geladen...</div>
+</div>
+
+<div class="modal" id="dayModal">
+    <div class="modal-content">
+        <h3 id="modal-date-title" style="margin-top:0;">Datum</h3>
+        <label for="status-select">Status:</label>
+        <select id="status-select">
+            <option value="">-- Bitte wählen --</option>
+            <option value="work">Arbeit</option>
+            <option value="free">Frei</option>
+        </select>
+        <label for="pdf-link-input">Google Drive Link zur PDF dieses Tages:</label>
+        <input type="text" id="pdf-link-input" placeholder="Link zur Tages-PDF einfügen...">
+        <div class="modal-buttons">
+            <button class="btn-close" onclick="closeModal()">Abbrechen</button>
+            <button class="btn-save" onclick="saveDayData()">Speichern</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="certModal">
+    <div class="modal-content">
+        <h3 style="margin-top:0;">Zertifikat hinzufügen</h3>
+        <label for="cert-name-input">Dateiname / Bezeichnung:</label>
+        <input type="text" id="cert-name-input" placeholder="z.B. Staplerschein.pdf">
+        <label for="cert-link-input">Google Drive Link:</label>
+        <input type="text" id="cert-link-input" placeholder="Link einfügen...">
+        <div class="modal-buttons">
+            <button class="btn-close" onclick="closeCertModal()">Abbrechen</button>
+            <button class="btn-save" onclick="saveNewCert()">Hinzufügen</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ==========================================
+    // JSONBIN.IO EINSTELLUNGEN
+    // ==========================================
+    const JSONBIN_BIN_ID = "6a61f77923a2f6593e59d0ce"; 
+    const JSONBIN_MASTER_KEY = "$2a$10$v7eXkZzZqQ4q1q1q1q1q1ue8G3X3X3X3X3X3X3X3X3X3X3X3X3X3X"; // (Hier bitte deinen Master-Key von JSONBin einfügen, falls noch nicht geschehen)
+
+    let currentDate = new Date(2026, 6, 1);
+    let selectedDateKey = null;
+    
+    let appData = {
+        fahrtenbuchData: {},
+        customLinksData: {},
+        hoursData: {},
+        certificatesData: []
+    };
+
+    const months = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
+
+    function getMonthKey() {
+        return `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+    }
+
+    function getPrevMonthKey() {
+        let d = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    }
+
+    async function loadFromCloud() {
+        try {
+            document.getElementById('sync-status').textContent = "Lade Daten aus der Cloud...";
+            let response = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`, {
+                headers: { 'X-Master-Key': JSONBIN_MASTER_KEY }
+            });
+            if (response.ok) {
+                let json = await response.json();
+                if (json.record) {
+                    appData = json.record;
+                }
+                document.getElementById('sync-status').textContent = "Cloud-Daten synchronisiert ✓";
+            }
+        } catch (e) {
+            console.error("Fehler beim Laden:", e);
+            document.getElementById('sync-status').textContent = "Fehler beim Laden der Cloud-Daten";
+        }
+        renderCalendar();
+    }
+
+    async function saveToCloud() {
+        try {
+            document.getElementById('sync-status').textContent = "Speichere in Cloud...";
+            let response = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Master-Key': JSONBIN_MASTER_KEY
+                },
+                body: JSON.stringify(appData)
+            });
+            if (response.ok) {
+                document.getElementById('sync-status').textContent = "Änderungen für alle User gespeichert ✓";
+            } else {
+                document.getElementById('sync-status').textContent = "Fehler beim Speichern!";
+            }
+        } catch (e) {
+            console.error("Fehler beim Speichern:", e);
+            document.getElementById('sync-status').textContent = "Verbindungsfehler beim Speichern";
+        }
+        renderCalendar();
+    }
+
+    function renderCalendar() {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+
+        document.getElementById('month-year-display').textContent = `${months[month]} ${year}`;
+        renderCustomSections();
+
+        const grid = document.getElementById('calendar-days');
+        grid.innerHTML = '';
+        const totalDays = new Date(year, month + 1, 0).getDate();
+
+        for (let day = 1; day <= totalDays; day++) {
+            let currentLoopDate = new Date(year, month, day);
+            let dayOfWeek = currentLoopDate.getDay();
+
+            if (dayOfWeek === 0 || dayOfWeek === 6) continue;
+
+            const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const fahrtenbuchData = appData.fahrtenbuchData || {};
+            const dayData = fahrtenbuchData[dateKey] || { status: '', pdfLink: '' };
+
+            const cell = document.createElement('div');
+            cell.className = `day-cell ${dayData.status}`;
+            cell.onclick = (e) => {
+                if (e.target.tagName === 'A') return;
+                openModal(dateKey);
+            };
+
+            let statusText = '';
+            if (dayData.status === 'work') statusText = 'Arbeit';
+            if (dayData.status === 'free') statusText = 'Frei';
+            
+            let pdfBadgeHTML = dayData.pdfLink ? `<a href="${dayData.pdfLink}" target="_blank" class="pdf-icon-badge" title="PDF öffnen">📄 PDF</a>` : '';
+
+            cell.innerHTML = `
+                <div class="day-number">${day}</div>
+                <div class="day-status">${statusText}</div>
+                ${pdfBadgeHTML}
+            `;
+            grid.appendChild(cell);
+        }
+    }
+
+    function renderCustomSections() {
+        renderEisenSection();
+        renderMeineStundenSection();
+        renderHoursSection();
+        renderCertificatesSection();
+    }
+
+    function renderEisenSection() {
+        const mKey = getMonthKey();
+        if (!appData.customLinksData) appData.customLinksData = {};
+        if (!appData.customLinksData[mKey]) appData.customLinksData[mKey] = {};
+        const link = appData.customLinksData[mKey]['eisen'] || '';
+        const container = document.getElementById('section-eisen');
+
+        if (link) {
+            container.innerHTML = `
+                <div class="section-display">
+                    <div class="display-left">
+                        <span class="section-title">Eisen Krämer Stunden</span>
+                        <a href="${link}" target="_blank" class="section-link">📄 Datei öffnen</a>
+                    </div>
+                    <button class="btn-section-edit" onclick="editEisenSection()">Link ändern</button>
+                </div>
+            `;
+        } else {
+            container.innerHTML = `
+                <div class="section-form">
+                    <span class="section-title">Eisen Krämer Stunden</span>
+                    <div class="input-row">
+                        <input type="text" id="input-eisen" placeholder="Google Drive Link einfügen...">
+                        <button class="btn-section-save" onclick="saveEisenSection()">Speichern</button>
+                    </div>
+                </div>
+            `;
+        }
+    }
+
+    function saveEisenSection() {
+        const mKey = getMonthKey();
+        const inputElem = document.getElementById('input-eisen');
+        if (!inputElem) return;
+
+        const link = inputElem.value.trim();
+        if (!appData.customLinksData[mKey]) appData.customLinksData[mKey] = {};
+        appData.customLinksData[mKey]['eisen'] = link;
+        
+        saveToCloud();
+    }
+
+    function editEisenSection() {
+        const mKey = getMonthKey();
+        const currentLink = appData.customLinksData[mKey]['eisen'] || '';
+        const container = document.getElementById('section-eisen');
+        container.innerHTML = `
+            <div class="section-form">
+                <span class="section-title">Eisen Krämer Stunden</span>
+                <div class="input-row">
+                    <input type="text" id="input-eisen" value="${currentLink}" placeholder="Google Drive Link einfügen...">
+                    <button class="btn-section-save" onclick="saveEisenSection()">Speichern</button>
+                </div>
+            </div>
+        `;
+    }
+
+    function renderMeineStundenSection() {
+        const mKey = getMonthKey();
+        if (!appData.customLinksData) appData.customLinksData = {};
+        if (!appData.customLinksData[mKey]) appData.customLinksData[mKey] = {};
+        const link = appData.customLinksData[mKey]['meineStunden'] || '';
+        const container = document.getElementById('section-meine-stunden');
+
+        if (link) {
+            container.innerHTML = `
+                <div class="section-display">
+                    <div class="display-left">
+                        <span class="section-title">Meine Stunden</span>
+                        <a href="${link}" target="_blank" class="section-link">📄 Datei öffnen</a>
+                    </div>
+                    <button class="btn-section-edit" onclick="editMeineStundenSection()">Link ändern</button>
+                </div>
+            `;
+        } else {
+            container.innerHTML = `
+                <div class="section-form">
+                    <span class="section-title">Meine Stunden</span>
+                    <div class="input-row">
+                        <input type="text" id="input-meine-stunden" placeholder="Google Drive Link einfügen...">
+                        <button class="btn-section-save" onclick="saveMeineStundenSection()">Speichern</button>
+                    </div>
+                </div>
+            `;
+        }
+    }
+
+    function saveMeineStundenSection() {
+        const mKey = getMonthKey();
+        const inputElem = document.getElementById('input-meine-stunden');
+        if (!inputElem) return;
+
+        const link = inputElem.value.trim();
+        if (!appData.customLinksData[mKey]) appData.customLinksData[mKey] = {};
+        appData.customLinksData[mKey]['meineStunden'] = link;
+        
+        saveToCloud();
+    }
+
+    function editMeineStundenSection() {
+        const mKey = getMonthKey();
+        const currentLink = appData.customLinksData[mKey]['meineStunden'] || '';
+        const container = document.getElementById('section-meine-stunden');
+        container.innerHTML = `
+            <div class="section-form">
+                <span class="section-title">Meine Stunden</span>
+                <div class="input-row">
+                    <input type="text" id="input-meine-stunden" value="${currentLink}" placeholder="Google Drive Link einfügen...">
+                    <button class="btn-section-save" onclick="saveMeineStundenSection()">Speichern</button>
+                </div>
+            </div>
+        `;
+    }
+
+    function renderHoursSection() {
+        const mKey = getMonthKey();
+        const prevMKey = getPrevMonthKey();
+
+        if (!appData.hoursData) appData.hoursData = {};
+        if (!appData.hoursData[mKey]) appData.hoursData[mKey] = { current: 0 };
+        
+        let carryOver = 0;
+        if (appData.hoursData[prevMKey] && appData.hoursData[prevMKey].total !== undefined) {
+            carryOver = appData.hoursData[prevMKey].total;
+        } else if (appData.hoursData[mKey].carry !== undefined) {
+            carryOver = appData.hoursData[mKey].carry;
+        }
+
+        let currentVal = appData.hoursData[mKey].current || 0;
+        let totalVal = carryOver + currentVal;
+        appData.hoursData[mKey].total = totalVal;
+
+        const container = document.getElementById('section-stunden');
+        container.innerHTML = `
+            <span class="section-title">Meine erarbeiteten Stunden</span>
+            <div class="hours-stack">
+                <div class="hours-row">
+                    <label>Übertrag (Vormonat)</label>
+                    <input type="number" step="0.25" id="input-carry" value="${carryOver}" onchange="updateHours()">
+                </div>
+                <div class="hours-row">
+                    <label>Erarbeitet (Monat)</label>
+                    <input type="number" step="0.25" id="input-current" value="${currentVal}" onchange="updateHours()" placeholder="0.00">
+                </div>
+                <div class="hours-row total-row">
+                    <label>Gesamtstand</label>
+                    <input type="text" id="display-total" value="${totalVal.toFixed(2)}" readonly>
+                </div>
+            </div>
+        `;
+    }
+
+    function updateHours() {
+        const mKey = getMonthKey();
+        const carryVal = parseFloat(document.getElementById('input-carry').value) || 0;
+        const currentVal = parseFloat(document.getElementById('input-current').value) || 0;
+        const totalVal = carryVal + currentVal;
+
+        if (!appData.hoursData[mKey]) appData.hoursData[mKey] = {};
+        appData.hoursData[mKey].carry = carryVal;
+        appData.hoursData[mKey].current = currentVal;
+        appData.hoursData[mKey].total = totalVal;
+
+        document.getElementById('display-total').value = totalVal.toFixed(2);
+        saveToCloud();
+    }
+
+    function renderCertificatesSection() {
+        const container = document.getElementById('section-zertifikate');
+        const certificatesData = appData.certificatesData || [];
+        
+        let listHTML = '';
+        if (certificatesData.length > 0) {
+            listHTML = '<div class="cert-list">';
+            certificatesData.forEach((cert, index) => {
+                listHTML += `
+                    <div class="cert-item">
+                        <a href="${cert.link}" target="_blank" class="section-link">📄 ${cert.name}</a>
+                        <button class="cert-delete" onclick="deleteCert(${index})" title="Löschen">✕</button>
+                    </div>
+                `;
+            });
+            listHTML += '</div>';
+        } else {
+            listHTML = '<div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 5px;">Noch keine Zertifikate hinterlegt.</div>';
+        }
+
+        container.innerHTML = `
+            <div class="cert-header-row">
+                <span class="section-title">Meine Zertifikate</span>
+                <button class="btn-add-cert" onclick="openCertModal()">+ Hinzufügen</button>
+            </div>
+            ${listHTML}
+        `;
+    }
+
+    function openCertModal() {
+        document.getElementById('cert-name-input').value = '';
+        document.getElementById('cert-link-input').value = '';
+        document.getElementById('certModal').style.display = 'flex';
+    }
+
+    function closeCertModal() {
+        document.getElementById('certModal').style.display = 'none';
+    }
+
+    function saveNewCert() {
+        const name = document.getElementById('cert-name-input').value.trim();
+        const link = document.getElementById('cert-link-input').value.trim();
+
+        if (!name || !link) {
+            alert('Bitte sowohl Dateinamen als auch Link eingeben.');
+            return;
+        }
+
+        if (!appData.certificatesData) appData.certificatesData = [];
+        appData.certificatesData.push({ name: name, link: link });
+        closeCertModal();
+        saveToCloud();
+    }
+
+    function deleteCert(index) {
+        appData.certificatesData.splice(index, 1);
+        saveToCloud();
+    }
+
+    function changeMonth(direction) {
+        currentDate.setMonth(currentDate.getMonth() + direction);
+        renderCalendar();
+    }
+
+    function openModal(dateKey) {
+        selectedDateKey = dateKey;
+        document.getElementById('modal-date-title').textContent = `Tag: ${dateKey}`;
+        
+        const fahrtenbuchData = appData.fahrtenbuchData || {};
+        const dayData = fahrtenbuchData[dateKey] || { status: '', pdfLink: '' };
+        document.getElementById('status-select').value = dayData.status;
+        document.getElementById('pdf-link-input').value = dayData.pdfLink || '';
+        
+        document.getElementById('dayModal').style.display = 'flex';
+    }
+
+    function closeModal() {
+        document.getElementById('dayModal').style.display = 'none';
+    }
+
+    function saveDayData() {
+        if (!selectedDateKey) return;
+
+        const status = document.getElementById('status-select').value;
+        const pdfLink = document.getElementById('pdf-link-input').value.trim();
+        
+        if (!appData.fahrtenbuchData) appData.fahrtenbuchData = {};
+        if (!appData.fahrtenbuchData[selectedDateKey]) {
+            appData.fahrtenbuchData[selectedDateKey] = {};
+        }
+
+        appData.fahrtenbuchData[selectedDateKey].status = status;
+        appData.fahrtenbuchData[selectedDateKey].pdfLink = pdfLink;
+
+        closeModal();
+        saveToCloud();
+    }
+
+    loadFromCloud();
+</script>
+
+</body>
+</html>
