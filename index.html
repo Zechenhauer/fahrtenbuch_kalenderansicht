@@ -484,7 +484,7 @@
 
 <script>
     // ==========================================
-    // JSONBIN.IO EINSTELLUNGEN (NEUE BIN ID)
+    // JSONBIN.IO EINSTELLUNGEN
     // ==========================================
     const JSONBIN_BIN_ID = "6a61fff1da38895dfe842892"; 
     const JSONBIN_MASTER_KEY = "$2a$10$1ynLUupN/Fka115SZVn9NurNpRBaWqrnH8qQXanu5c.cHPfriVgWS";
@@ -500,6 +500,23 @@
     };
 
     const months = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
+
+    // Hilfsfunktion: Automatische Optimierung von Google Drive Links auf /preview
+    function formatDriveLink(url) {
+        if (!url) return '';
+        let cleanUrl = url.trim();
+        if (cleanUrl.includes('drive.google.com')) {
+            // Ersetzt alles am Ende nach /view oder /edit durch /preview
+            cleanUrl = cleanUrl.replace(/\/view.*$/, '/preview');
+            cleanUrl = cleanUrl.replace(/\/edit.*$/, '/preview');
+            if (!cleanUrl.endsWith('/preview') && cleanUrl.includes('/file/d/')) {
+                // Falls es eine saubere ID ohne Suffix ist
+                if (!cleanUrl.endsWith('/')) cleanUrl += '/';
+                cleanUrl += 'preview';
+            }
+        }
+        return cleanUrl;
+    }
 
     function getMonthKey() {
         return `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
@@ -563,19 +580,15 @@
         const grid = document.getElementById('calendar-days');
         grid.innerHTML = '';
 
-        // Heutiges Datum für den direkten Vergleich ermitteln
         const todayObj = new Date();
         const todayKey = `${todayObj.getFullYear()}-${String(todayObj.getMonth() + 1).padStart(2, '0')}-${String(todayObj.getDate()).padStart(2, '0')}`;
 
-        // Erster Tag des Monats und wie viele Tage der Monat hat
         const firstDayOfMonth = new Date(year, month, 1);
         const totalDays = new Date(year, month + 1, 0).getDate();
         
-        // Wochentag des Monatsanfangs anpassen (Mo = 0, So = 6)
         let startingDayOfWeek = firstDayOfMonth.getDay() - 1;
-        if (startingDayOfWeek === -1) startingDayOfWeek = 6; // Sonntag korrigieren
+        if (startingDayOfWeek === -1) startingDayOfWeek = 6;
 
-        // Letzter Tag des Vormonats für die Auffüllung
         const prevMonthTotalDays = new Date(year, month, 0).getDate();
 
         // 1. Auffüllung Tage vom Vormonat
@@ -619,7 +632,8 @@
             if (dayData.status === 'work') statusText = 'Arbeit';
             if (dayData.status === 'free') statusText = 'Frei';
             
-            let pdfBadgeHTML = dayData.pdfLink ? `<a href="${dayData.pdfLink}" target="_blank" class="pdf-icon-badge" title="PDF öffnen">📄 PDF</a>` : '';
+            let formattedLink = formatDriveLink(dayData.pdfLink);
+            let pdfBadgeHTML = formattedLink ? `<a href="${formattedLink}" target="_blank" class="pdf-icon-badge" title="PDF öffnen">📄 PDF</a>` : '';
 
             cell.innerHTML = `
                 <div class="day-header-row">
@@ -631,7 +645,7 @@
             grid.appendChild(cell);
         }
 
-        // 3. Auffüllung Tage vom Folgemonat (damit das Raster voll bleibt)
+        // 3. Auffüllung Tage vom Folgemonat
         let totalCellsSoFar = startingDayOfWeek + totalDays;
         let remainingCells = totalCellsSoFar % 7 === 0 ? 0 : 7 - (totalCellsSoFar % 7);
         for (let day = 1; day <= remainingCells; day++) {
@@ -665,10 +679,11 @@
         const mKey = getMonthKey();
         if (!appData.customLinksData) appData.customLinksData = {};
         if (!appData.customLinksData[mKey]) appData.customLinksData[mKey] = {};
-        const link = appData.customLinksData[mKey]['eisen'] || '';
+        const rawLink = appData.customLinksData[mKey]['eisen'] || '';
+        const link = formatDriveLink(rawLink);
         const container = document.getElementById('section-eisen');
 
-        if (link) {
+        if (rawLink) {
             container.innerHTML = `
                 <div class="section-display">
                     <div class="display-left">
@@ -722,10 +737,11 @@
         const mKey = getMonthKey();
         if (!appData.customLinksData) appData.customLinksData = {};
         if (!appData.customLinksData[mKey]) appData.customLinksData[mKey] = {};
-        const link = appData.customLinksData[mKey]['meineStunden'] || '';
+        const rawLink = appData.customLinksData[mKey]['meineStunden'] || '';
+        const link = formatDriveLink(rawLink);
         const container = document.getElementById('section-meine-stunden');
 
-        if (link) {
+        if (rawLink) {
             container.innerHTML = `
                 <div class="section-display">
                     <div class="display-left">
@@ -784,7 +800,6 @@
         if (!appData.hoursData) appData.hoursData = {};
         if (!appData.hoursData[mKey]) appData.hoursData[mKey] = { current: 0 };
         
-        // Automatische Zählung der Arbeitstage im aktuellen Monat
         let workDaysCount = 0;
         const totalDaysInMonth = new Date(year, month + 1, 0).getDate();
         for (let day = 1; day <= totalDaysInMonth; day++) {
@@ -852,9 +867,10 @@
         if (certificatesData.length > 0) {
             listHTML = '<div class="cert-list">';
             certificatesData.forEach((cert, index) => {
+                let formattedCertLink = formatDriveLink(cert.link);
                 listHTML += `
                     <div class="cert-item">
-                        <a href="${cert.link}" target="_blank" class="section-link">📄 ${cert.name}</a>
+                        <a href="${formattedCertLink}" target="_blank" class="section-link">📄 ${cert.name}</a>
                         <button class="cert-delete" onclick="deleteCert(${index})" title="Löschen">✕</button>
                     </div>
                 `;
