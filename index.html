@@ -304,6 +304,23 @@
             border: none;
         }
 
+        .hours-row.diff-row {
+            background: rgba(129, 199, 132, 0.08);
+            border-color: rgba(129, 199, 132, 0.3);
+        }
+
+        .hours-row.diff-row label {
+            color: var(--accent-free);
+            font-weight: bold;
+        }
+
+        .hours-row.diff-row input {
+            color: var(--accent-free);
+            font-weight: bold;
+            background: transparent;
+            border: none;
+        }
+
         .cert-header-row {
             display: flex;
             justify-content: space-between;
@@ -501,12 +518,10 @@
 
     const months = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
 
-    // Hilfsfunktion: Erkennt, ob der Nutzer auf einem Smartphone/Tablet ist
     function isMobileDevice() {
         return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     }
 
-    // Hilfsfunktion: Handy bekommt den Direkt-Export (ohne "Öffnen mit"-Klick), PC behält die volle Ansicht zum Drucken!
     function formatDriveLink(url) {
         if (!url) return '';
         let cleanUrl = url.trim();
@@ -835,9 +850,16 @@
             carryOver = appData.hoursData[mKey].carry;
         }
 
+        const monthlyTarget = 40.00; // Feste Vorgabe pro Monat
         let currentVal = appData.hoursData[mKey].current || 0;
         let totalVal = carryOver + currentVal;
         appData.hoursData[mKey].total = totalVal;
+
+        // Berechnung der Rest-Differenz: (Soll + Übertrag) - Erarbeitet
+        // Beispiel: (40 + (-14)) - 37.5 = 26 - 37.5 = -11.5 (noch zu leisten, wenn positiv; im Minus bedeutet Übererfüllung)
+        // Genauer gewünscht vom User: Gesamtsoll im Monat (40 + Übertrag) minus bisher erarbeitet:
+        let totalRequired = monthlyTarget + carryOver; 
+        let differenceVal = totalRequired - currentVal;
 
         const container = document.getElementById('section-stunden');
         container.innerHTML = `
@@ -852,12 +874,20 @@
                     <input type="number" step="0.25" id="input-carry" value="${carryOver}" onchange="updateHours()">
                 </div>
                 <div class="hours-row">
+                    <label>Monatsvorgabe (Soll)</label>
+                    <input type="text" value="${monthlyTarget.toFixed(2)} Std" readonly style="background: transparent; border: none; font-weight: bold; color: var(--text-color);">
+                </div>
+                <div class="hours-row">
                     <label>Erarbeitet (Monat)</label>
                     <input type="number" step="0.25" id="input-current" value="${currentVal}" onchange="updateHours()" placeholder="0.00">
                 </div>
                 <div class="hours-row total-row">
-                    <label>Gesamtstand</label>
+                    <label>Gesamtstand (Übertrag + Aktuell)</label>
                     <input type="text" id="display-total" value="${totalVal.toFixed(2)}" readonly>
+                </div>
+                <div class="hours-row diff-row">
+                    <label>Noch zu leisten (Differenz)</label>
+                    <input type="text" id="display-diff" value="${differenceVal.toFixed(2)}" readonly>
                 </div>
             </div>
         `;
@@ -867,7 +897,11 @@
         const mKey = getMonthKey();
         const carryVal = parseFloat(document.getElementById('input-carry').value) || 0;
         const currentVal = parseFloat(document.getElementById('input-current').value) || 0;
-        const totalVal = carryVal + currentVal;
+        const monthlyTarget = 40.00;
+        
+        let totalVal = carryVal + currentVal;
+        let totalRequired = monthlyTarget + carryVal;
+        let differenceVal = totalRequired - currentVal;
 
         if (!appData.hoursData[mKey]) appData.hoursData[mKey] = {};
         appData.hoursData[mKey].carry = carryVal;
@@ -875,6 +909,7 @@
         appData.hoursData[mKey].total = totalVal;
 
         document.getElementById('display-total').value = totalVal.toFixed(2);
+        document.getElementById('display-diff').value = differenceVal.toFixed(2);
         saveToCloud();
     }
 
