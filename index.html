@@ -283,35 +283,16 @@
             box-sizing: border-box;
         }
 
-        .hours-row.total-row {
-            background: rgba(255, 167, 38, 0.08);
-            border-color: rgba(255, 167, 38, 0.3);
-        }
-
-        .hours-row.total-row label {
-            color: var(--primary);
-            font-weight: bold;
-        }
-
-        .hours-row.total-row input {
-            color: var(--primary);
-            font-weight: bold;
-            background: transparent;
-            border: none;
-        }
-
         .hours-row.diff-row {
-            background: rgba(129, 199, 132, 0.08);
-            border-color: rgba(129, 199, 132, 0.3);
+            border-width: 1px;
+            border-style: solid;
         }
 
         .hours-row.diff-row label {
-            color: var(--accent-free);
             font-weight: bold;
         }
 
         .hours-row.diff-row input {
-            color: var(--accent-free);
             font-weight: bold;
             background: transparent;
             border: none;
@@ -803,13 +784,20 @@
 
         const monthlyTarget = 40.00;
         let currentVal = appData.hoursData[mKey].current || 0;
-        let totalVal = carryOver + currentVal;
-        appData.hoursData[mKey].total = totalVal;
+        
+        // NEUE BERECHNUNG: 40 Std. + Übertrag (Plus oder Minus) = Gesamtsoll minus Erarbeitet
+        let targetWithCarry = monthlyTarget + carryOver;
+        let differenceVal = targetWithCarry - currentVal;
 
-        // KORREKTUR: Die Differenz errechnet sich rein aus Monatsvorgabe minus bisher erarbeitetem Wert im Monat
-        let differenceVal = monthlyTarget - currentVal;
+        appData.hoursData[mKey].total = differenceVal; // Speichern für eventuellen Folgemonats-Übertrag
 
         const container = document.getElementById('section-stunden');
+        
+        // Dynamische Farben für die Differenz (Grün bei Minus/Guthaben, Rot bei Plus/Restschuld)
+        let diffColor = differenceVal < 0 ? 'var(--accent-free)' : 'var(--accent-work)';
+        let diffBg = differenceVal < 0 ? 'rgba(129, 199, 132, 0.08)' : 'rgba(239, 83, 80, 0.08)';
+        let diffBorder = differenceVal < 0 ? 'rgba(129, 199, 132, 0.3)' : 'rgba(239, 83, 80, 0.3)';
+
         container.innerHTML = `
             <span class="section-title">Meine erarbeiteten Stunden</span>
             <div class="hours-stack">
@@ -829,13 +817,9 @@
                     <label>Erarbeitet (Monat)</label>
                     <input type="number" step="0.25" id="input-current" value="${currentVal}" onchange="updateHours()" placeholder="0.00">
                 </div>
-                <div class="hours-row total-row">
-                    <label>Gesamtstand (Übertrag + Aktuell)</label>
-                    <input type="text" id="display-total" value="${totalVal.toFixed(2)}" readonly>
-                </div>
-                <div class="hours-row diff-row">
-                    <label>Noch zu leisten (Differenz)</label>
-                    <input type="text" id="display-diff" value="${differenceVal.toFixed(2)}" readonly>
+                <div class="hours-row diff-row" style="background: ${diffBg}; border-color: ${diffBorder};">
+                    <label style="color: ${diffColor};">Noch zu leisten (Differenz)</label>
+                    <input type="text" id="display-diff" value="${differenceVal.toFixed(2)}" readonly style="color: ${diffColor};">
                 </div>
             </div>
         `;
@@ -847,16 +831,15 @@
         const currentVal = parseFloat(document.getElementById('input-current').value) || 0;
         const monthlyTarget = 40.00;
         
-        let totalVal = carryVal + currentVal;
-        let differenceVal = monthlyTarget - currentVal;
+        let targetWithCarry = monthlyTarget + carryVal;
+        let differenceVal = targetWithCarry - currentVal;
 
         if (!appData.hoursData[mKey]) appData.hoursData[mKey] = {};
         appData.hoursData[mKey].carry = carryVal;
         appData.hoursData[mKey].current = currentVal;
-        appData.hoursData[mKey].total = totalVal;
+        appData.hoursData[mKey].total = differenceVal;
 
-        document.getElementById('display-total').value = totalVal.toFixed(2);
-        document.getElementById('display-diff').value = differenceVal.toFixed(2);
+        renderHoursSection();
         saveToCloud();
     }
 
