@@ -760,12 +760,24 @@
     }
 
     function renderHoursSection() {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
         const mKey = getMonthKey();
         const prevMKey = getPrevMonthKey();
 
         if (!appData.hoursData) appData.hoursData = {};
         if (!appData.hoursData[mKey]) appData.hoursData[mKey] = { current: 0 };
         
+        // Automatische Zählung der Arbeitstage im aktuellen Monat
+        let workDaysCount = 0;
+        const totalDaysInMonth = new Date(year, month + 1, 0).getDate();
+        for (let day = 1; day <= totalDaysInMonth; day++) {
+            const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            if (appData.fahrtenbuchData && appData.fahrtenbuchData[dateKey] && appData.fahrtenbuchData[dateKey].status === 'work') {
+                workDaysCount++;
+            }
+        }
+
         let carryOver = 0;
         if (appData.hoursData[prevMKey] && appData.hoursData[prevMKey].total !== undefined) {
             carryOver = appData.hoursData[prevMKey].total;
@@ -781,6 +793,10 @@
         container.innerHTML = `
             <span class="section-title">Meine erarbeiteten Stunden</span>
             <div class="hours-stack">
+                <div class="hours-row">
+                    <label>Arbeitstage (Monat)</label>
+                    <input type="text" value="${workDaysCount} Tage" readonly style="background: transparent; border: none; font-weight: bold; color: var(--text-color);">
+                </div>
                 <div class="hours-row">
                     <label>Übertrag (Vormonat)</label>
                     <input type="number" step="0.25" id="input-carry" value="${carryOver}" onchange="updateHours()">
