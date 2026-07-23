@@ -533,11 +533,6 @@
         return `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
     }
 
-    function getPrevMonthKey() {
-        let d = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
-        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-    }
-
     async function loadFromCloud() {
         try {
             document.getElementById('sync-status').textContent = "Lade Daten aus der Cloud...";
@@ -772,7 +767,7 @@
 
         if (!appData.hoursData) appData.hoursData = {};
         if (!appData.hoursData[mKey]) {
-            appData.hoursData[mKey] = { current: 0, target: 54.00, carry: 0 };
+            appData.hoursData[mKey] = { current: 0, carry: 0 };
         }
         
         let workDaysCount = 0;
@@ -785,11 +780,9 @@
         }
 
         let carryVal = appData.hoursData[mKey].carry !== undefined ? appData.hoursData[mKey].carry : 0;
-        let monthlyTarget = appData.hoursData[mKey].target !== undefined ? appData.hoursData[mKey].target : 54.00;
+        let monthlyTarget = 40.00; // Fest auf 40 Std. gesetzt
         let currentVal = appData.hoursData[mKey].current || 0;
         
-        // Korrekte Berechnung: Differenz = (Soll - Übertrag) - Erarbeitet
-        // Beispiel: (54 - 14) - 37,5 = 40 - 37,5 = +2,5 (Noch zu leisten)
         let targetWithCarry = monthlyTarget - carryVal;
         let differenceVal = targetWithCarry - currentVal;
 
@@ -797,9 +790,6 @@
 
         const container = document.getElementById('section-stunden');
         
-        // NEUE FARBLOGIK nach Wunsch:
-        // Wenn das Vorzeichen ein Plus ist (differenceVal > 0) -> ROT (Offene Stunden)
-        // Wenn das Vorzeichen ein Minus ist oder 0 (differenceVal <= 0) -> GRÜN (Guthaben)
         let isPlus = differenceVal > 0;
         let diffColor = isPlus ? 'var(--accent-work)' : 'var(--accent-free)';
         let diffBg = isPlus ? 'rgba(239, 83, 80, 0.08)' : 'rgba(129, 199, 132, 0.08)';
@@ -818,7 +808,7 @@
                 </div>
                 <div class="hours-row">
                     <label>Monatsvorgabe (Soll)</label>
-                    <input type="number" step="0.25" id="input-target" value="${monthlyTarget}" onchange="updateHours()">
+                    <input type="text" value="40.00 Std" readonly style="background: transparent; border: none; font-weight: bold; color: var(--text-color);">
                 </div>
                 <div class="hours-row">
                     <label>Erarbeitet (Monat)</label>
@@ -835,15 +825,14 @@
     function updateHours() {
         const mKey = getMonthKey();
         const carryVal = parseFloat(document.getElementById('input-carry').value) || 0;
-        const targetVal = parseFloat(document.getElementById('input-target').value) || 0;
         const currentVal = parseFloat(document.getElementById('input-current').value) || 0;
+        const monthlyTarget = 40.00;
         
-        let targetWithCarry = targetVal - carryVal;
+        let targetWithCarry = monthlyTarget - carryVal;
         let differenceVal = targetWithCarry - currentVal;
 
         if (!appData.hoursData[mKey]) appData.hoursData[mKey] = {};
         appData.hoursData[mKey].carry = carryVal;
-        appData.hoursData[mKey].target = targetVal;
         appData.hoursData[mKey].current = currentVal;
         appData.hoursData[mKey].total = differenceVal;
 
