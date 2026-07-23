@@ -506,14 +506,13 @@
         return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     }
 
-    // Hilfsfunktion: Passt den Link nur auf Handys auf /preview an, am PC bleibt er normal zum Drucken!
+    // Hilfsfunktion: Passt den Link auf Handys auf /preview an, am PC bleibt er normal zum Drucken!
     function formatDriveLink(url) {
         if (!url) return '';
         let cleanUrl = url.trim();
         
         if (cleanUrl.includes('drive.google.com')) {
             if (isMobileDevice()) {
-                // Auf dem Handy: Automatisch auf /preview umstellen, damit die Einträge korrekt laden
                 cleanUrl = cleanUrl.replace(/\/view.*$/, '/preview');
                 cleanUrl = cleanUrl.replace(/\/edit.*$/, '/preview');
                 if (!cleanUrl.endsWith('/preview') && cleanUrl.includes('/file/d/')) {
@@ -521,7 +520,6 @@
                     cleanUrl += 'preview';
                 }
             } else {
-                // Am PC: Den Link im normalen /view Modus lassen, damit man direkt drucken und steuern kann!
                 cleanUrl = cleanUrl.replace(/\/preview.*$/, '/view?usp=sharing');
                 cleanUrl = cleanUrl.replace(/\/edit.*$/, '/view?usp=sharing');
                 if (!cleanUrl.includes('/view') && cleanUrl.includes('/file/d/')) {
@@ -606,7 +604,7 @@
 
         const prevMonthTotalDays = new Date(year, month, 0).getDate();
 
-        // 1. Auffüllung Tage vom Vormonat
+        // 1. Vormonat
         for (let i = startingDayOfWeek - 1; i >= 0; i--) {
             let dayNum = prevMonthTotalDays - i;
             let prevMonth = month === 0 ? 11 : month - 1;
@@ -627,7 +625,7 @@
             grid.appendChild(cell);
         }
 
-        // 2. Reguläre Tage des aktuellen Monats
+        // 2. Aktueller Monat
         for (let day = 1; day <= totalDays; day++) {
             const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
             const fahrtenbuchData = appData.fahrtenbuchData || {};
@@ -660,7 +658,7 @@
             grid.appendChild(cell);
         }
 
-        // 3. Auffüllung Tage vom Folgemonat
+        // 3. Folgemonat
         let totalCellsSoFar = startingDayOfWeek + totalDays;
         let remainingCells = totalCellsSoFar % 7 === 0 ? 0 : 7 - (totalCellsSoFar % 7);
         for (let day = 1; day <= remainingCells; day++) {
@@ -958,7 +956,6 @@
     function saveDayData() {
         if (!selectedDateKey) return;
 
-        const status = document.getElementById('status-select-select` ? ... haha, 'status-select'
         const statusElem = document.getElementById('status-select');
         const pdfLinkElem = document.getElementById('pdf-link-input');
         
