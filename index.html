@@ -506,26 +506,32 @@
         return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     }
 
-    // Hilfsfunktion: Passt den Link auf Handys auf /preview an, am PC bleibt er normal zum Drucken!
+    // Hilfsfunktion: Handy bekommt den Direkt-Export (ohne "Öffnen mit"-Klick), PC behält die volle Ansicht zum Drucken!
     function formatDriveLink(url) {
         if (!url) return '';
         let cleanUrl = url.trim();
         
         if (cleanUrl.includes('drive.google.com')) {
-            if (isMobileDevice()) {
-                cleanUrl = cleanUrl.replace(/\/view.*$/, '/preview');
-                cleanUrl = cleanUrl.replace(/\/edit.*$/, '/preview');
-                if (!cleanUrl.endsWith('/preview') && cleanUrl.includes('/file/d/')) {
-                    if (!cleanUrl.endsWith('/')) cleanUrl += '/';
-                    cleanUrl += 'preview';
-                }
+            let fileId = '';
+            if (cleanUrl.includes('/file/d/')) {
+                let parts = cleanUrl.split('/file/d/');
+                if (parts[1]) fileId = parts[1].split('/')[0];
+            } else if (cleanUrl.includes('id=')) {
+                let urlParams = new URLSearchParams(cleanUrl.split('?')[1]);
+                fileId = urlParams.get('id');
+            }
+
+            if (isMobileDevice() && fileId) {
+                return `https://drive.google.com/uc?export=view&id=${fileId}`;
             } else {
                 cleanUrl = cleanUrl.replace(/\/preview.*$/, '/view?usp=sharing');
                 cleanUrl = cleanUrl.replace(/\/edit.*$/, '/view?usp=sharing');
+                cleanUrl = cleanUrl.replace(/\/uc\?export=view.*$/, '/view?usp=sharing');
                 if (!cleanUrl.includes('/view') && cleanUrl.includes('/file/d/')) {
                     if (!cleanUrl.endsWith('/')) cleanUrl += '/';
                     cleanUrl += 'view?usp=sharing';
                 }
+                return cleanUrl;
             }
         }
         return cleanUrl;
