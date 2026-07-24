@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Eisen Krämer - Fahrtenbuch</title>
+    <!-- JSZip Bibliothek für echte ZIP-Downloads im Browser -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         :root {
             --bg-color: #121212;
@@ -348,6 +350,24 @@
 
         .cert-delete:hover {
             color: #ff8a80;
+        }
+
+        .btn-zip-download {
+            width: 100%;
+            background: var(--border-color);
+            color: var(--primary);
+            border: 1px dashed var(--primary);
+            padding: 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.85rem;
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        .btn-zip-download:hover {
+            background: rgba(255, 167, 38, 0.1);
         }
 
         .modal {
@@ -780,7 +800,7 @@
         }
 
         let carryVal = appData.hoursData[mKey].carry !== undefined ? appData.hoursData[mKey].carry : 0;
-        let monthlyTarget = 40.00; // Fest auf 40 Std. gesetzt
+        let monthlyTarget = 40.00;
         let currentVal = appData.hoursData[mKey].current || 0;
         
         let targetWithCarry = monthlyTarget - carryVal;
@@ -867,7 +887,89 @@
                 <button class="btn-add-cert" onclick="openCertModal()">+ Hinzufügen</button>
             </div>
             ${listHTML}
+            <button class="btn-zip-download" onclick="downloadAllPDFsAsZip()">📦 Alle Monats-PDFs als ZIP herunterladen</button>
         `;
+    }
+
+    // Funktion zum echten Erstellen und Herunterladen einer ZIP-Datei
+    async function downloadAllPDFsAsZip() {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+        const totalDaysInMonth = new Date(year, month + 1, 0).getDate();
+        const fahrtenbuchData = appData.fahrtenbuchData || {};
+
+        let pdfLinksToDownload = [];
+
+        for (let day = 1; day <= totalDaysInMonth; day++) {
+            const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            if (fahrtenbuchData[dateKey] && fahrtenbuchData[dateKey].pdfLink) {
+                let rawLink = fahrtenbuchData[dateKey].pdfLink.trim();
+                let fileId = '';
+                
+                if (rawLink.includes('/file/d/')) {
+                    let parts = rawLink.split('/file/d/');
+                    if (parts[1]) fileId = parts[1].split('/')[0];
+                } else if (rawLink.includes('id=')) {
+                    let urlParams = new URLSearchParams(rawLink.split('?')[1]);
+                    fileId = urlParams.get('id');
+                }
+
+                if (fileId) {
+                    // Direkter Download-Link für Google Drive Dateien
+                    let directDownloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+                    pdfLinksToDownload.push({ name: `${dateKey}_Fahrtenbuch.pdf`, url: directDownloadUrl });
+                }
+            }
+        }
+
+        if (pdfLinksToDownload.length === 0) {
+            alert("Für diesen Monat sind keine Google Drive PDFs in den Kalendertagen hinterlegt.");
+            return;
+        }
+
+        const btn = document.querySelector('.btn-zip-download');
+        btn.textContent = "⏳ Erstelle ZIP-Archiv...";
+        btn.disabled = true;
+
+        const zip = new JSZip();
+        let successCount = 0;
+
+        for (let item of pdfLinksToDownload) {
+            try {
+                // Wir nutzen einen öffentlichen CORS-Proxy oder fetch direkt, falls erlaubt
+                let response = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(item.url)}`);
+                if (response.ok) {
+                    let blob = await response.blob();
+                    zip.file(item.name, blob);
+                    successCount++;
+                }
+            } catch (e) {
+                console.error(`Fehler beim Laden von ${item.name}:`, e);
+            }
+        }
+
+        if (successCount > 0) {
+            try {
+                let content = await zip.generateAsync({ type: "blob" });
+                let zipUrl = URL.createObjectURL(content);
+                let a = document.createElement('a');
+                a.href = zipUrl;
+                a.download = `Fahrtenbuch_${months[month]}_${year}.zip`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(zipUrl);
+                alert(`Erfolgreich! ${successCount} PDF(s) wurden als ZIP gepackt und heruntergeladen.`);
+            } catch (err) {
+                console.error("ZIP-Generierungsfehler:", err);
+                alert("Fehler beim Erstellen der ZIP-Datei.");
+            }
+        } else {
+            alert("Konnte keine der PDFs abrufen (möglicherweise blockieren die Google Drive Freigabeeinstellungen den direkten Zugriff).");
+        }
+
+        btn.textContent = "📦 Alle Monats-PDFs als ZIP herunterladen";
+        btn.disabled = false;
     }
 
     function openCertModal() {
