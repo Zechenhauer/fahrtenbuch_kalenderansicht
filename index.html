@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Eisen Krämer - Fahrtenbuch</title>
-    <!-- Supabase Client Bibliothek laden -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
             --bg-color: #121212;
@@ -13,9 +11,9 @@
             --text-color: #e0e0e0;
             --text-muted: #9e9e9e;
             --border-color: #333333;
-            --accent-work: #ef5350; /* Rot für Plus / Offene Stunden */
-            --accent-free: #81c784; /* Grün für Minus / Guthaben */
-            --primary: #ffa726; /* Schönes Orange */
+            --accent-work: #ef5350;
+            --accent-free: #81c784;
+            --primary: #ffa726;
         }
 
         body {
@@ -188,16 +186,6 @@
             gap: 10px;
         }
 
-        .section-form input[type="text"] {
-            flex-grow: 1;
-            padding: 6px 10px;
-            background: #1a1a1a;
-            border: 1px solid var(--border-color);
-            color: var(--text-color);
-            border-radius: 4px;
-            font-size: 0.85rem;
-        }
-
         .btn-section-save {
             background: var(--primary);
             color: #000;
@@ -290,16 +278,6 @@
             border-style: solid;
         }
 
-        .hours-row.diff-row label {
-            font-weight: bold;
-        }
-
-        .hours-row.diff-row input {
-            font-weight: bold;
-            background: transparent;
-            border: none;
-        }
-
         .cert-header-row {
             display: flex;
             justify-content: space-between;
@@ -346,19 +324,6 @@
             cursor: pointer;
             font-weight: bold;
             font-size: 0.9rem;
-        }
-
-        .cert-delete:hover {
-            color: #ff8a80;
-        }
-
-        .file-upload-wrapper {
-            margin-top: 5px;
-        }
-
-        .file-upload-wrapper input[type="file"] {
-            font-size: 0.8rem;
-            color: var(--text-muted);
         }
 
         .btn-zip-download {
@@ -482,10 +447,8 @@
             <option value="work">Arbeit</option>
             <option value="free">Frei</option>
         </select>
-        <label for="pdf-file-input">PDF-Datei für diesen Tag hochladen:</label>
-        <div class="file-upload-wrapper">
-            <input type="file" id="pdf-file-input" accept="application/pdf">
-        </div>
+        <label for="pdf-link-input">GitHub PDF-Link:</label>
+        <input type="text" id="pdf-link-input" placeholder="https://raw.githubusercontent.com/...">
         <div id="current-pdf-info" style="font-size: 0.75rem; color: var(--primary); margin-top: 6px;"></div>
         <div class="modal-buttons">
             <button class="btn-close" onclick="closeModal()">Abbrechen</button>
@@ -499,10 +462,8 @@
         <h3 style="margin-top:0;">Zertifikat hinzufügen</h3>
         <label for="cert-name-input">Bezeichnung:</label>
         <input type="text" id="cert-name-input" placeholder="z.B. Staplerschein">
-        <label for="cert-file-input">PDF-Datei auswählen:</label>
-        <div class="file-upload-wrapper">
-            <input type="file" id="cert-file-input" accept="application/pdf">
-        </div>
+        <label for="cert-link-input">GitHub PDF-Link:</label>
+        <input type="text" id="cert-link-input" placeholder="https://raw.githubusercontent.com/...">
         <div class="modal-buttons">
             <button class="btn-close" onclick="closeCertModal()">Abbrechen</button>
             <button class="btn-save" onclick="saveNewCert()">Hinzufügen</button>
@@ -512,14 +473,8 @@
 
 <script>
     // ==========================================
-    // SUPABASE & JSONBIN EINSTELLUNGEN
+    // JSONBIN EINSTELLUNGEN (Für Kalender & Daten)
     // ==========================================
-    const SUPABASE_URL = 'https://lhusylpjnujlqomougmg.supabase.co';
-    const SUPABASE_ANON_KEY = 'sb_publishable_yXEueWILvAq-Vm2VfTuYyg_BIQeE1KK';
-    const STORAGE_BUCKET = "eisen-kraemer-files";
-
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
     const JSONBIN_BIN_ID = "6a61fff1da38895dfe842892"; 
     const JSONBIN_MASTER_KEY = "$2a$10$1ynLUupN/Fka115SZVn9NurNpRBaWqrnH8qQXanu5c.cHPfriVgWS";
 
@@ -537,30 +492,6 @@
 
     function getMonthKey() {
         return `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
-    }
-
-    // Hilfsfunktion zum Hochladen von Dateien in den Supabase Storage
-    async function uploadFileToSupabase(file, folderPath) {
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
-        const filePath = `${folderPath}/${fileName}`;
-
-        const { data, error } = await supabaseClient.storage
-            .from(STORAGE_BUCKET)
-            .upload(filePath, file);
-
-        if (error) {
-            console.error("Upload-Fehler:", error);
-            alert("Fehler beim Hochladen der Datei: " + error.message);
-            return null;
-        }
-
-        // Öffentliche URL generieren
-        const { data: publicURLData } = supabaseClient.storage
-            .from(STORAGE_BUCKET)
-            .getPublicUrl(filePath);
-
-        return publicURLData.publicUrl;
     }
 
     async function loadFromCloud() {
@@ -595,7 +526,7 @@
                 body: JSON.stringify(appData)
             });
             if (response.ok) {
-                document.getElementById('sync-status').textContent = "Änderungen für alle User gespeichert ✓";
+                document.getElementById('sync-status').textContent = "Änderungen gespeichert ✓";
             } else {
                 document.getElementById('sync-status').textContent = "Fehler beim Speichern!";
             }
@@ -667,127 +598,68 @@
     }
 
     function renderCustomSections() {
-        renderEisenSection();
-        renderMeineStundenSection();
+        renderGenericFileSection('eisen', 'Eisen Krämer Stunden');
+        renderGenericFileSection('meineStunden', 'Meine Stunden');
         renderHoursSection();
         renderCertificatesSection();
     }
 
-    function renderEisenSection() {
+    function renderGenericFileSection(key, title) {
         const mKey = getMonthKey();
         if (!appData.customLinksData) appData.customLinksData = {};
         if (!appData.customLinksData[mKey]) appData.customLinksData[mKey] = {};
-        const link = appData.customLinksData[mKey]['eisen'] || '';
-        const container = document.getElementById('section-eisen');
+        const link = appData.customLinksData[mKey][key] || '';
+        
+        const containerId = key === 'eisen' ? 'section-eisen' : 'section-meine-stunden';
+        const container = document.getElementById(containerId);
 
         if (link) {
             container.innerHTML = `
                 <div class="section-display">
                     <div class="display-left">
-                        <span class="section-title">Eisen Krämer Stunden</span>
+                        <span class="section-title">${title}</span>
                         <a href="${link}" target="_blank" class="section-link">📄 Datei öffnen</a>
                     </div>
-                    <button class="btn-section-edit" onclick="editEisenSection()">Datei ändern</button>
+                    <button class="btn-section-edit" onclick="editGenericFileSection('${key}', '${title}')">Link ändern</button>
                 </div>
             `;
         } else {
             container.innerHTML = `
                 <div class="section-form">
-                    <span class="section-title">Eisen Krämer Stunden</span>
+                    <span class="section-title">${title}</span>
                     <div class="input-row">
-                        <input type="file" id="input-eisen-file" accept="application/pdf">
-                        <button class="btn-section-save" onclick="saveEisenSection()">Hochladen</button>
+                        <input type="text" id="input-${key}-link" placeholder="https://raw.githubusercontent.com/..." style="flex:1; padding:6px; background:#2a2a2a; border:1px solid var(--border-color); color:var(--text-color); border-radius:4px;">
+                        <button class="btn-section-save" onclick="saveGenericFileSection('${key}')">Speichern</button>
                     </div>
                 </div>
             `;
         }
     }
 
-    async function saveEisenSection() {
+    function saveGenericFileSection(key) {
         const mKey = getMonthKey();
-        const fileInput = document.getElementById('input-eisen-file');
-        if (!fileInput || fileInput.files.length === 0) {
-            alert("Bitte wähle eine PDF-Datei aus.");
+        const inputElem = document.getElementById(`input-${key}-link`);
+        if (!inputElem || !inputElem.value.trim()) {
+            alert("Bitte einen gültigen GitHub-Link eingeben.");
             return;
         }
 
-        document.getElementById('sync-status').textContent = "Lade Datei hoch...";
-        const fileUrl = await uploadFileToSupabase(fileInput.files[0], 'eisen-stunden');
-        if (fileUrl) {
-            if (!appData.customLinksData[mKey]) appData.customLinksData[mKey] = {};
-            appData.customLinksData[mKey]['eisen'] = fileUrl;
-            saveToCloud();
-        }
-    }
-
-    function editEisenSection() {
-        const container = document.getElementById('section-eisen');
-        container.innerHTML = `
-            <div class="section-form">
-                <span class="section-title">Eisen Krämer Stunden (Neue Datei)</span>
-                <div class="input-row">
-                    <input type="file" id="input-eisen-file" accept="application/pdf">
-                    <button class="btn-section-save" onclick="saveEisenSection()">Ersetzen</button>
-                </div>
-            </div>
-        `;
-    }
-
-    function renderMeineStundenSection() {
-        const mKey = getMonthKey();
-        if (!appData.customLinksData) appData.customLinksData = {};
         if (!appData.customLinksData[mKey]) appData.customLinksData[mKey] = {};
-        const link = appData.customLinksData[mKey]['meineStunden'] || '';
-        const container = document.getElementById('section-meine-stunden');
-
-        if (link) {
-            container.innerHTML = `
-                <div class="section-display">
-                    <div class="display-left">
-                        <span class="section-title">Meine Stunden</span>
-                        <a href="${link}" target="_blank" class="section-link">📄 Datei öffnen</a>
-                    </div>
-                    <button class="btn-section-edit" onclick="editMeineStundenSection()">Datei ändern</button>
-                </div>
-            `;
-        } else {
-            container.innerHTML = `
-                <div class="section-form">
-                    <span class="section-title">Meine Stunden</span>
-                    <div class="input-row">
-                        <input type="file" id="input-meine-stunden-file" accept="application/pdf">
-                        <button class="btn-section-save" onclick="saveMeineStundenSection()">Hochladen</button>
-                    </div>
-                </div>
-            `;
-        }
+        appData.customLinksData[mKey][key] = inputElem.value.trim();
+        saveToCloud();
     }
 
-    async function saveMeineStundenSection() {
+    function editGenericFileSection(key, title) {
         const mKey = getMonthKey();
-        const fileInput = document.getElementById('input-meine-stunden-file');
-        if (!fileInput || fileInput.files.length === 0) {
-            alert("Bitte wähle eine PDF-Datei aus.");
-            return;
-        }
-
-        document.getElementById('sync-status').textContent = "Lade Datei hoch...";
-        const fileUrl = await uploadFileToSupabase(fileInput.files[0], 'meine-stunden');
-        if (fileUrl) {
-            if (!appData.customLinksData[mKey]) appData.customLinksData[mKey] = {};
-            appData.customLinksData[mKey]['meineStunden'] = fileUrl;
-            saveToCloud();
-        }
-    }
-
-    function editMeineStundenSection() {
-        const container = document.getElementById('section-meine-stunden');
+        const currentLink = appData.customLinksData[mKey][key] || '';
+        const containerId = key === 'eisen' ? 'section-eisen' : 'section-meine-stunden';
+        const container = document.getElementById(containerId);
         container.innerHTML = `
             <div class="section-form">
-                <span class="section-title">Meine Stunden (Neue Datei)</span>
+                <span class="section-title">${title} (Link bearbeiten)</span>
                 <div class="input-row">
-                    <input type="file" id="input-meine-stunden-file" accept="application/pdf">
-                    <button class="btn-section-save" onclick="saveMeineStundenSection()">Ersetzen</button>
+                    <input type="text" id="input-${key}-link" value="${currentLink}" style="flex:1; padding:6px; background:#2a2a2a; border:1px solid var(--border-color); color:var(--text-color); border-radius:4px;">
+                    <button class="btn-section-save" onclick="saveGenericFileSection('${key}')">Aktualisieren</button>
                 </div>
             </div>
         `;
@@ -938,7 +810,7 @@
 
     function openCertModal() {
         document.getElementById('cert-name-input').value = '';
-        document.getElementById('cert-file-input').value = '';
+        document.getElementById('cert-link-input').value = '';
         document.getElementById('certModal').style.display = 'flex';
     }
 
@@ -946,24 +818,19 @@
         document.getElementById('certModal').style.display = 'none';
     }
 
-    async function saveNewCert() {
+    function saveNewCert() {
         const nameInput = document.getElementById('cert-name-input').value.trim();
-        const fileInput = document.getElementById('cert-file-input');
+        const linkInput = document.getElementById('cert-link-input').value.trim();
 
-        if (!nameInput || fileInput.files.length === 0) {
-            alert('Bitte sowohl einen Namen als auch eine PDF-Datei auswählen.');
+        if (!nameInput || !linkInput) {
+            alert('Bitte sowohl eine Bezeichnung als auch den GitHub-Link eingeben.');
             return;
         }
 
-        document.getElementById('sync-status').textContent = "Lade Zertifikat hoch...";
-        const fileUrl = await uploadFileToSupabase(fileInput.files[0], 'zertifikate');
-        
-        if (fileUrl) {
-            if (!appData.certificatesData) appData.certificatesData = [];
-            appData.certificatesData.push({ name: nameInput, link: fileUrl });
-            closeCertModal();
-            saveToCloud();
-        }
+        if (!appData.certificatesData) appData.certificatesData = [];
+        appData.certificatesData.push({ name: nameInput, link: linkInput });
+        closeCertModal();
+        saveToCloud();
     }
 
     function deleteCert(index) {
@@ -972,8 +839,8 @@
     }
 
     function changeMonth(direction) {
-    currentDate.setMonth(currentDate.getMonth() + direction);
-    renderCalendar();
+        currentDate.setMonth(currentDate.getMonth() + direction);
+        renderCalendar();
     }
 
     function openModal(dateKey) {
@@ -983,13 +850,13 @@
         const fahrtenbuchData = appData.fahrtenbuchData || {};
         const dayData = fahrtenbuchData[dateKey] || { status: '', pdfLink: '' };
         document.getElementById('status-select').value = dayData.status;
-        document.getElementById('pdf-file-input').value = ''; // Reset file input
+        document.getElementById('pdf-link-input').value = dayData.pdfLink || '';
         
         const infoDiv = document.getElementById('current-pdf-info');
         if (dayData.pdfLink) {
-            infoDiv.innerHTML = `Aktuelle PDF: <a href="${dayData.pdfLink}" target="_blank" style="color: var(--primary);">Anzeigen</a>`;
+            infoDiv.innerHTML = `Aktueller Link hinterlegt ✓`;
         } else {
-            infoDiv.textContent = "Keine PDF hinterlegt.";
+            infoDiv.textContent = "Keine PDF verknüpft.";
         }
         
         document.getElementById('dayModal').style.display = 'flex';
@@ -999,15 +866,16 @@
         document.getElementById('dayModal').style.display = 'none';
     }
 
-    async function saveDayData() {
+    function saveDayData() {
         if (!selectedDateKey) return;
 
         const statusElem = document.getElementById('status-select');
-        const fileInput = document.getElementById('pdf-file-input');
+        const linkInput = document.getElementById('pdf-link-input');
         
         if (!statusElem) return;
 
         const status = statusElem.value;
+        const pdfLink = linkInput ? linkInput.value.trim() : '';
         
         if (!appData.fahrtenbuchData) appData.fahrtenbuchData = {};
         if (!appData.fahrtenbuchData[selectedDateKey]) {
@@ -1015,15 +883,7 @@
         }
 
         appData.fahrtenbuchData[selectedDateKey].status = status;
-
-        // Wenn eine neue Datei ausgewählt wurde, hochladen
-        if (fileInput.files.length > 0) {
-            document.getElementById('sync-status').textContent = "Lade Tages-PDF hoch...";
-            const fileUrl = await uploadFileToSupabase(fileInput.files[0], 'fahrtenbuch-tages-pdfs');
-            if (fileUrl) {
-                appData.fahrtenbuchData[selectedDateKey].pdfLink = fileUrl;
-            }
-        }
+        appData.fahrtenbuchData[selectedDateKey].pdfLink = pdfLink;
 
         closeModal();
         saveToCloud();
